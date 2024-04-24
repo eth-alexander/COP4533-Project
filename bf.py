@@ -1,7 +1,7 @@
 import numpy as np
 
 class Station:
-    def __init__(self, x, y, height = 0):
+    def __init__(self, x, y, height):
         self.x= x
         self.y = y
         self.height = height
@@ -36,36 +36,36 @@ class Station:
     
 # directed edge
 class Edge:
-    def __init__(self, node1, node2):
-        self.node1 = node1
-        self.node2 = node2
-        self.weight = max(-1, 1 + node2.height - node1.height)
+    def __init__(self, station1, station2):
+        self.station1 = station1
+        self.station2 = station2
+        self.weight = max(-1, 1 + station2.height - station1.height)
         
-    # note: node order matters! this is because edges don't have same weight going each way
+    # note: station order matters! this is because edges don't have same weight going each way
     def __eq__(self, other):
-        return (self.node1 == other.node1 and self.node2 == other.node2) and \
+        return (self.station1 == other.station1 and self.station2 == other.station2) and \
                self.weight == other.weight
 
     def __hash__(self):
-        return hash((self.node1, self.node2, self.weight))
+        return hash((self.station1, self.station2, self.weight))
  
     def __str__(self):
-        return f"Edge(node1={self.node1}, y={self.node2}, weight={self.weight})"
+        return f"Edge(station1={self.station1}, station2={self.station2}, weight={self.weight})"
 
     @property
-    def node1(self):
+    def station1(self):
         return self._first
 
-    @node1.setter
-    def node1(self, value):
+    @station1.setter
+    def station1(self, value):
         self._first = value
 
     @property
-    def node2(self):
+    def station2(self):
         return self._second
 
-    @node2.setter
-    def node2(self, value):
+    @station2.setter
+    def station2(self, value):
         self._second = value
 
     @property
@@ -92,14 +92,14 @@ def bellman_ford(edges, stations, initial_station, final_station):
     # for each station, relax all edges
     for s in range(len(stations) - 1):
         for edge in edges:
-            if distances[(edge.node1.x, edge.node1.y)] + edge.weight < distances[(edge.node2.x, edge.node2.y)]:
-                distances[(edge.node2.x, edge.node2.y)] = distances[(edge.node1.x, edge.node1.y)] + edge.weight
+            if distances[(edge.station1.x, edge.station1.y)] + edge.weight < distances[(edge.station2.x, edge.station2.y)]:
+                distances[(edge.station2.x, edge.station2.y)] = distances[(edge.station1.x, edge.station1.y)] + edge.weight
     
     # find all negative loops
     for s in range(len(stations) - 1):
         for edge in edges:
-            if distances[(edge.node1.x, edge.node1.y)] + edge.weight < distances[(edge.node2.x, edge.node2.y)]:
-                distances[(edge.node2.x, edge.node2.y)] = -np.inf
+            if distances[(edge.station1.x, edge.station1.y)] + edge.weight < distances[(edge.station2.x, edge.station2.y)]:
+                distances[(edge.station2.x, edge.station2.y)] = -np.inf
     
     return distances[(final_station.x, final_station.y)]
     
@@ -122,13 +122,13 @@ def read_grid(filename):
             
         # read source station (S)
         source_x, source_y = map(int, grid.readline().strip().split(','))
-        source = Station(source_x, source_y)
+        source = stations[(source_x, source_y)]
         
         # read stations that supply water to baths (B)
-        water_stations = []
+        water_stations = {}
         for line in grid:
             x, y = map(int, line.strip().split(','))
-            water_stations.append(Station(x, y))
+            water_stations[(x, y)] = stations[(x, y)]
             
      
         edges = set()
@@ -147,3 +147,12 @@ def read_grid(filename):
 stations, source, water_stations, edges = read_grid('Simple_Example/grid.txt')
 
 print(bellman_ford(edges, stations, stations[source.x, source.y], stations[0, 2]))
+
+# for station in stations.values():
+#             print(station)
+# print("Source Station: ", source)
+# for station in water_stations.values():
+#     print("Water Station: ", station)
+# for edge in edges:
+#     print(edge)
+# print(len(edges))
