@@ -1,6 +1,3 @@
-# Bellman Ford Shortest Path Algorithm: finds the shortest path from one node to any other node
-# https://youtu.be/lyw4FaxrwHg?si=iTxF1USaP5z8-_5C
-
 import numpy as np
 
 class Station:
@@ -79,31 +76,32 @@ class Edge:
     def weight(self, value):
         self._weight = value   
 
-def bellman_ford(edges, num_vertices, initial_node, final_node):
+# calculate shortest path from initial station to final station
+def bellman_ford(edges, stations, initial_station, final_station):
     
-    # distance from initial_node to all other nodes
-    distances = []
+    # distance from initial_station to all other stations
+    distances = {}
     
     # initialize all distances to +infinity
-    for _ in range(num_vertices):
-        distances.append(np.inf)
+    for  station in stations.values():
+        distances[(station.x, station.y)] = np.inf
     
-    # set distance from initial_node to itself as 0
-    distances[initial_node] = 0
+    # set distance from initial_station to itself as 0
+    distances[(initial_station.x, initial_station.y)] = 0
     
-    # for each vertex, relax all edges
-    for v in range(num_vertices - 1):
+    # for each station, relax all edges
+    for s in range(len(stations) - 1):
         for edge in edges:
-            if distances[edge.node1] + edge.weight < distances[edge.node2]:
-                distances[edge.node2] = distances[edge.node1] + edge.weight
+            if distances[(edge.node1.x, edge.node1.y)] + edge.weight < distances[(edge.node2.x, edge.node2.y)]:
+                distances[(edge.node2.x, edge.node2.y)] = distances[(edge.node1.x, edge.node1.y)] + edge.weight
     
     # find all negative loops
-    for v in range(num_vertices - 1):
+    for s in range(len(stations) - 1):
         for edge in edges:
-            if distances[edge.node1] + edge.weight < distances[edge.node2]:
-                distances[edge.node2] = -np.inf
+            if distances[(edge.node1.x, edge.node1.y)] + edge.weight < distances[(edge.node2.x, edge.node2.y)]:
+                distances[(edge.node2.x, edge.node2.y)] = -np.inf
     
-    return distances[final_node]
+    return distances[(final_station.x, final_station.y)]
     
 # read grid.txt and convert to weighted graph 
 def read_grid(filename):
@@ -122,7 +120,6 @@ def read_grid(filename):
             if len(stations) >= num_rows * num_columns:
                 break
             
-        
         # read source station (S)
         source_x, source_y = map(int, grid.readline().strip().split(','))
         source = Station(source_x, source_y)
@@ -145,30 +142,8 @@ def read_grid(filename):
             if (station.x, station.y + 1) in stations:
                 edges.add(Edge(station, stations[(station.x, station.y + 1)]))
                 
-        # print("Number of rows: ", num_rows)
-        # print("Number of columns: ", num_columns)
-        
         return stations, source, water_stations, edges
 
-
-
-# edges = []
-# num_vertices = 5
-# initial_node = 0
-# bellman_ford(edges, num_vertices, initial_node)
-# e1 = Edge(0, 1, 5)
-# print(e1.weight)
-# print(e1.weight < -np.inf)
-
 stations, source, water_stations, edges = read_grid('Simple_Example/grid.txt')
-# read_grid('Example1/grid.txt')
 
-for station in stations.values():
-            print(station)
-print("Source Station: ", source)
-for station in water_stations:
-    print(station)
-for edge in edges:
-    print(edge)
-print(len(edges))
-
+print(bellman_ford(edges, stations, stations[source.x, source.y], stations[0, 2]))
