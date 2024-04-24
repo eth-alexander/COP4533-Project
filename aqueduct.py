@@ -42,7 +42,7 @@ class Edge:
         self.station2 = station2
         self.time = max(-1, 1 + station2.height - station1.height)
         
-    # note: station order matters! this is because edges don't have same time going each way
+    # note: station order matters, edges don't have same time going each way
     def __eq__(self, other):
         return (self.station1 == other.station1 and self.station2 == other.station2) and \
                self.time == other.time
@@ -78,7 +78,7 @@ class Edge:
         self._time = value   
 
 # calculate shortest path from initial_station to final_station
-def bellman_ford(edges, stations, initial_station, final_station):
+def shortest_path(edges, stations, initial_station, final_station):
     
     # distance from initial_station to all other stations
     distances = {}
@@ -107,12 +107,10 @@ def bellman_ford(edges, stations, initial_station, final_station):
 # read grid.txt and convert to weighted graph 
 def read_grid(filename):
     with open(filename, 'r') as grid:
-        
-        # read number of rows and number of columns
         num_rows, num_columns = map(int, grid.readline().strip().split(','))
         stations = {}
         
-        # read stations
+        # stations
         for line in grid:
             height, x, y = map(int, line.strip().split(','))
             station = Station( x, y, height)
@@ -121,17 +119,17 @@ def read_grid(filename):
             if len(stations) >= num_rows * num_columns:
                 break
             
-        # read source station (S)
+        # source station (S)
         source_x, source_y = map(int, grid.readline().strip().split(','))
         source = stations[(source_x, source_y)]
         
-        # read stations that supply water to baths (B)
+        # stations that supply water to baths (B)
         water_stations = {}
         for line in grid:
             x, y = map(int, line.strip().split(','))
             water_stations[(x, y)] = stations[(x, y)]
             
-     
+        # edges
         edges = set()
         for station in stations.values():
             if (station.x - 1, station.y) in stations:
@@ -146,17 +144,32 @@ def read_grid(filename):
         return stations, source, water_stations, edges
             
 # store list of all paths from S to all b_i with respective costs
-def find_paths(source, unvisited_ws, edges, stations):
+def find_paths(source, unvisited_ws, edges, stations, memo={}):
     paths = []
+    
     for order in itertools.permutations(unvisited_ws.keys()):
-        current_node = source
-        path_length = 0
-        path = [source]
-        for ws in order:
-            path_length += bellman_ford(edges, stations, current_node, unvisited_ws[ws])
-            path.append(unvisited_ws[ws])
-            current_node = unvisited_ws[ws]
-        paths.append((path, path_length))
+        paths += find_paths_recursive(source, unvisited_ws, edges, stations, order, source, 0, [source], memo)
+    return paths
+
+def find_paths_recursive(source, unvisited_ws, edges, stations, order, current_station, path_length, path, memo):
+    # no more water stations to be visited
+    if not order:
+        return [(path, path_length)]
+    
+    paths = []
+    next_station = unvisited_ws[order[0]]
+    
+    # check if already calculated path from current_station to next_station
+    if (current_station, next_station) in memo:
+        path_length += memo[(current_station, next_station)]
+    else:
+        length = shortest_path(edges, stations, current_station, next_station)
+        path_length += length
+        memo[(current_station, next_station)] = length
+    
+    updated_path = path + [next_station]
+    paths += find_paths_recursive(source, unvisited_ws, edges, stations, order[1:], next_station, path_length, updated_path, memo)
+    
     return paths
 
 # find minimum cost path
@@ -168,6 +181,9 @@ def opt(source, unvisited_ws, edges, stations):
             min_path_length = length
     return min_path_length
 
+# read input
+stations, source, water_stations, edges = read_grid('grid.txt')
 
-stations, source, water_stations, edges = read_grid('Simple_Example/grid.txt')
-print("Length of the shortest path:", opt(source, water_stations, edges, stations))
+# write output
+with open('pathLength.txt', 'w') as file:
+    file.write(str(opt(source, water_stations, edges, stations)))
