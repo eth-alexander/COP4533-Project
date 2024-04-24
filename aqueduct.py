@@ -144,8 +144,9 @@ def read_grid(filename):
         return stations, source, water_stations, edges
             
 # store list of all paths from S to all b_i with respective costs
-def find_paths(source, unvisited_ws, edges, stations, memo={}):
+def find_paths(source, unvisited_ws, edges, stations):
     paths = []
+    memo = {}
     
     for order in itertools.permutations(unvisited_ws.keys()):
         paths += find_paths_recursive(source, unvisited_ws, edges, stations, order, source, 0, [source], memo)
@@ -175,11 +176,7 @@ def find_paths_recursive(source, unvisited_ws, edges, stations, order, current_s
 # find minimum cost path
 def opt(source, unvisited_ws, edges, stations):
     paths = find_paths(source, unvisited_ws, edges, stations)
-    min_path_length = np.inf
-    for _, length in paths:
-        if length < min_path_length:
-            min_path_length = length
-    return min_path_length
+    return min(path_length for _, path_length in paths)
 
 # read input
 stations, source, water_stations, edges = read_grid('grid.txt')
