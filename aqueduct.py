@@ -1,5 +1,7 @@
 import numpy as np
+import itertools
 
+# station
 class Station:
     def __init__(self, x, y, height):
         self.x= x
@@ -32,25 +34,24 @@ class Station:
     @height.setter
     def height(self, value):
         self._height = value
-
-    
+ 
 # directed edge
 class Edge:
     def __init__(self, station1, station2):
         self.station1 = station1
         self.station2 = station2
-        self.weight = max(-1, 1 + station2.height - station1.height)
+        self.time = max(-1, 1 + station2.height - station1.height)
         
-    # note: station order matters! this is because edges don't have same weight going each way
+    # note: station order matters! this is because edges don't have same time going each way
     def __eq__(self, other):
         return (self.station1 == other.station1 and self.station2 == other.station2) and \
-               self.weight == other.weight
+               self.time == other.time
 
     def __hash__(self):
-        return hash((self.station1, self.station2, self.weight))
+        return hash((self.station1, self.station2, self.time))
  
     def __str__(self):
-        return f"Edge(station1={self.station1}, station2={self.station2}, weight={self.weight})"
+        return f"Edge(station1={self.station1}, station2={self.station2}, time={self.time})"
 
     @property
     def station1(self):
@@ -69,14 +70,14 @@ class Edge:
         self._second = value
 
     @property
-    def weight(self):
-        return self._weight
+    def time(self):
+        return self._time
 
-    @weight.setter
-    def weight(self, value):
-        self._weight = value   
+    @time.setter
+    def time(self, value):
+        self._time = value   
 
-# calculate shortest path from initial station to final station
+# calculate shortest path from initial_station to final_station
 def bellman_ford(edges, stations, initial_station, final_station):
     
     # distance from initial_station to all other stations
@@ -92,13 +93,13 @@ def bellman_ford(edges, stations, initial_station, final_station):
     # for each station, relax all edges
     for s in range(len(stations) - 1):
         for edge in edges:
-            if distances[(edge.station1.x, edge.station1.y)] + edge.weight < distances[(edge.station2.x, edge.station2.y)]:
-                distances[(edge.station2.x, edge.station2.y)] = distances[(edge.station1.x, edge.station1.y)] + edge.weight
+            if distances[(edge.station1.x, edge.station1.y)] + edge.time < distances[(edge.station2.x, edge.station2.y)]:
+                distances[(edge.station2.x, edge.station2.y)] = distances[(edge.station1.x, edge.station1.y)] + edge.time
     
     # find all negative loops
     for s in range(len(stations) - 1):
         for edge in edges:
-            if distances[(edge.station1.x, edge.station1.y)] + edge.weight < distances[(edge.station2.x, edge.station2.y)]:
+            if distances[(edge.station1.x, edge.station1.y)] + edge.time < distances[(edge.station2.x, edge.station2.y)]:
                 distances[(edge.station2.x, edge.station2.y)] = -np.inf
     
     return distances[(final_station.x, final_station.y)]
@@ -143,16 +144,30 @@ def read_grid(filename):
                 edges.add(Edge(station, stations[(station.x, station.y + 1)]))
                 
         return stations, source, water_stations, edges
+            
+# store list of all paths from S to all b_i with respective costs
+def find_paths(source, unvisited_ws, edges, stations):
+    paths = []
+    for order in itertools.permutations(unvisited_ws.keys()):
+        current_node = source
+        path_length = 0
+        path = [source]
+        for ws in order:
+            path_length += bellman_ford(edges, stations, current_node, unvisited_ws[ws])
+            path.append(unvisited_ws[ws])
+            current_node = unvisited_ws[ws]
+        paths.append((path, path_length))
+    return paths
+
+# find minimum cost path
+def opt(source, unvisited_ws, edges, stations):
+    paths = find_paths(source, unvisited_ws, edges, stations)
+    min_path_length = np.inf
+    for _, length in paths:
+        if length < min_path_length:
+            min_path_length = length
+    return min_path_length
+
 
 stations, source, water_stations, edges = read_grid('Simple_Example/grid.txt')
-
-print(bellman_ford(edges, stations, stations[source.x, source.y], stations[0, 2]))
-
-# for station in stations.values():
-#             print(station)
-# print("Source Station: ", source)
-# for station in water_stations.values():
-#     print("Water Station: ", station)
-# for edge in edges:
-#     print(edge)
-# print(len(edges))
+print("Length of the shortest path:", opt(source, water_stations, edges, stations))
